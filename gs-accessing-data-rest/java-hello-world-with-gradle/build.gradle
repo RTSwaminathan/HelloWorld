@@ -1,0 +1,59 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'com.example'
+version = '0.1.0'
+
+application {
+    // Set your main class here
+    mainClass.set('hello.HelloWorld')
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'joda-time:joda-time:2.2'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+// Produce a fat (uber) jar without using the Shadow plugin
+// The fatJar will include all runtime dependencies and a Main-Class manifest
+tasks.register('fatJar', Jar) {
+    archiveBaseName.set('jb-hello-world')
+    archiveVersion.set(version.toString())
+    archiveClassifier.set('')
+
+    manifest {
+        attributes('Main-Class': application.mainClass.get())
+    }
+
+    from(sourceSets.main.output)
+
+    // include runtime dependencies
+    from({
+        configurations.runtimeClasspath.findAll { it.exists() }.collect { it.isDirectory() ? it : zipTree(it) }
+    })
+}
+
+// Disable the plain jar task to avoid confusion
+tasks.named('jar') {
+    enabled = false
+}
+
+// Make the build produce the fat jar
+tasks.named('build') {
+    dependsOn tasks.named('fatJar')
+}
+
+// Provide a modern wrapper task only if it doesn't already exist (Gradle provides one by default).
+// Remove explicit wrapper registration to avoid "task already exists" error.
+// If you need to regenerate the wrapper, run: gradle wrapper --gradle-version 9.2.1
